@@ -50,7 +50,7 @@ def generate_image_prompt_and_caption(theme: str, client: genai.Client) -> tuple
     today = datetime.now(timezone.utc).strftime("%Y-%m-%d (%A)")
 
     response = client.models.generate_content(
-        model="gemini-2.5-flash",
+        model="gemini-2.5-flash-image-generation",
         contents=(
             f"Theme for my Instagram account: {theme}\n"
             f"Today's date: {today}\n\n"
@@ -76,7 +76,7 @@ def generate_image_prompt_and_caption(theme: str, client: genai.Client) -> tuple
 
 def generate_image(image_prompt: str, out_path: Path, client: genai.Client) -> None:
     response = client.models.generate_content(
-        model="gemini-2.5-flash-image",
+        model="gemini-2.5-flash-image-generation",
         contents=image_prompt,
         config=types.GenerateContentConfig(
             response_modalities=["IMAGE", "TEXT"]
