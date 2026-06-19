@@ -1,0 +1,29 @@
+name: Daily Instagram Post
+
+on:
+  schedule:
+    # Runs daily at 13:00 UTC. Adjust to whenever you want it to post.
+    - cron: '0 13 * * *'
+  workflow_dispatch: {}  # lets you trigger a run manually from the Actions tab
+
+jobs:
+  post:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Generate image, caption, and publish to Instagram
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          ZERNIO_API_KEY: ${{ secrets.ZERNIO_API_KEY }}
+          ZERNIO_ACCOUNT_ID: ${{ secrets.ZERNIO_ACCOUNT_ID }}
+        run: python scripts/generate_and_post.py
