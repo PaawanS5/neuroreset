@@ -75,19 +75,22 @@ def generate_image_prompt_and_caption(theme: str, client: genai.Client) -> tuple
 
 
 def generate_image(image_prompt: str, out_path: Path, client: genai.Client) -> None:
-    response = client.models.generate_images(
+    response = client.models.generate_content(
         model="gemini-2.5-flash-image",
-        prompt=image_prompt,
-        config=types.GenerateImagesConfig(
-            number_of_images=5,
-            aspect_ratio="1:1",
+        contents=image_prompt,
+        config=types.GenerateContentConfig(
+            response_modalities=["IMAGE", "TEXT"]
         ),
     )
-    if not response.generated_images:
-        raise RuntimeError("Returned no images (it may have been filtered).")
-    response.generated_images[0].image.save(str(out_path))
-
-
+    image_data = None
+    for part in response.candidates[0].content.parts:
+        if part.inline_data is not None:
+            image_data = part.inline_data.data
+            break
+    if not image_data:
+        raise RuntimeError("No image returned — prompt may have been filtered.")
+    with open(out_path, "wb") as f:
+        f.write(image_data)
 def upload_image_to_zernio(image_path: Path, api_key: str) -> str:
     """Upload the image via Zernio's presigned upload flow and return its public URL."""
     content_type = mimetypes.guess_type(image_path.name)[0] or "image/png"
