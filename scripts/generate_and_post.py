@@ -73,7 +73,7 @@ def encode_image_b64(path: Path) -> str:
 def generate_image_prompts_and_caption(theme: str, client: OpenAI) -> tuple[list[str], str]:
     """
     Ask GPT-4o (with logo + optional sample image as vision input) to produce:
-      - 2 distinct image prompts for gpt-image-2, each matching the brand style
+      - 2 distinct image prompts and two beautiful quotes from the books in the prompt for gpt-image-2, each matching the brand style
         and explicitly instructing the model to include the logo in the scene
       - 1 Instagram caption covering both images
     """
@@ -134,7 +134,9 @@ def generate_image_prompts_and_caption(theme: str, client: OpenAI) -> tuple[list
             "    place it naturally in the scene (glowing emblem, holographic, centrepiece, etc).\n"
             "  • The 2 prompts must be visually distinct — different scenes, compositions, "
             "    or moments — so the carousel feels varied, not repetitive.\n"
-            "  • No text, words, or captions inside the generated images.\n\n"
+            "  • Each image must include a short powerful quote or thought (5-10 words) "
+            "    from the books mentioned on theme, rendered as elegant glowing golden text overlaid "
+            "    naturally on the image — like a mystical inscription or illuminated scripture.\n\n"
             "caption: one engaging Instagram caption (2-4 sentences) that works for both "
             "slides, followed by a line of 5-8 relevant hashtags. "
             "Tone: inspiring, thoughtful, aligned with neuroscience/mindset/personal growth."
