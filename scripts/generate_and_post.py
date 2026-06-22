@@ -1,28 +1,26 @@
 """
-Daily Instagram poster - Gemini (image + caption) + Zernio (publishing).
+Daily Instagram poster - OpenAI (caption + image) + Zernio (publishing).
 
 Pipeline:
   1. Read the theme prompt from prompt.txt
-  2. Ask Gemini for today's specific image prompt + caption, based on that theme
-  3. Generate the image with Google Imagen (Gemini API)
+  2. Ask GPT-4o for today's specific image prompt + caption, based on that theme
+  3. Generate the image with DALL-E 3
   4. Upload the image to Zernio's media storage (presigned URL flow)
   5. Publish the post to Instagram via Zernio's posts API
 
 Required environment variables (set as GitHub repo secrets):
-  GEMINI_API_KEY      - Google AI Studio API key (used for both text + image generation)
+  OPENAI_API_KEY      - OpenAI API key
   ZERNIO_API_KEY      - Zernio API key
   ZERNIO_ACCOUNT_ID   - Zernio's account ID for your connected Instagram account
 """
 
 import json
-import mimetypes
 import os
+import requests
 from datetime import datetime, timezone
 from pathlib import Path
 
-import requests
-from google import genai
-from google.genai import types
+from openai import OpenAI
 
 ZERNIO_BASE_URL = "https://zernio.com/api/v1"
 PROMPT_FILE = Path("prompt.txt")
@@ -45,55 +43,57 @@ def read_theme_prompt() -> str:
     return theme
 
 
-def generate_image_prompt_and_caption(theme: str, client: genai.Client) -> tuple[str, str]:
-    """Ask Gemini to turn the theme into today's specific image prompt + IG caption."""
+def generate_image_prompt_and_caption(theme: str, client: OpenAI) -> tuple[str, str]:
+    """Ask GPT-4o to turn the theme into today's specific image prompt + IG caption."""
     today = datetime.now(timezone.utc).strftime("%Y-%m-%d (%A)")
 
-    response = client.models.generate_content(
-        model="gemini-2.5-flash-image-generation",
-        contents=(
-            f"Theme for my Instagram account: {theme}\n"
-            f"Today's date: {today}\n\n"
-            "Create ONE Instagram post for today based on this theme. "
-            "Respond with ONLY raw JSON (no markdown fences, no commentary) in exactly this shape:\n"
-            '{"image_prompt": "...", "caption": "..."}\n\n'
-            "image_prompt: a vivid, specific, English-language text-to-image prompt (under 400 "
-            "characters) describing subject, setting, and visual style for an AI image generator. "
-            "Give it a fresh, specific angle on the theme so it doesn't feel repetitive day to day.\n"
-            "caption: an engaging Instagram caption (2-4 sentences), followed by a line of 5-8 "
-            "relevant hashtags."
-        ),
+    response = client.chat.completions.create(
+        model="gpt-4o",
+        messages=[
+            {
+                "role": "user",
+                "content": (
+                    f"Theme for my Instagram account: {theme}\n"
+                    f"Today's date: {today}\n\n"
+                    "Create ONE Instagram post for today based on this theme. "
+                    "Respond with ONLY raw JSON (no markdown fences, no commentary) in exactly this shape:\n"
+                    '{"image_prompt": "...", "caption": "..."}\n\n'
+                    "image_prompt: a vivid, specific, English-language text-to-image prompt (under 400 "
+                    "characters) describing subject, setting, and visual style for DALL-E 3. "
+                    "Give it a fresh, specific angle on the theme so it doesn't feel repetitive day to day.\n"
+                    "caption: an engaging Instagram caption (2-4 sentences), followed by a line of 5-8 "
+                    "relevant hashtags."
+                ),
+            }
+        ],
+        response_format={"type": "json_object"},
     )
 
-    text = response.text.strip()
-    if text.startswith("```"):
-        text = text.strip("`")
-        if text.startswith("json"):
-            text = text[4:]
-    data = json.loads(text.strip())
+    data = json.loads(response.choices[0].message.content)
     return data["image_prompt"], data["caption"]
 
 
-def generate_image(image_prompt: str, out_path: Path, client: genai.Client) -> None:
-    response = client.models.generate_content(
-        model="gemini-2.5-flash-image-generation",
-        contents=image_prompt,
-        config=types.GenerateContentConfig(
-            response_modalities=["IMAGE", "TEXT"]
-        ),
+def generate_image(image_prompt: str, out_path: Path, client: OpenAI) -> None:
+    """Generate an image with DALL-E 3 and save it to disk."""
+    response = client.images.generate(
+        model="dall-e-3",
+        prompt=image_prompt,
+        size="1024x1024",
+        quality="standard",
+        n=1,
+        response_format="url",
     )
-    image_data = None
-    for part in response.candidates[0].content.parts:
-        if part.inline_data is not None:
-            image_data = part.inline_data.data
-            break
-    if not image_data:
-        raise RuntimeError("No image returned — prompt may have been filtered.")
+
+    image_url = response.data[0].url
+    image_data = requests.get(image_url, timeout=60).content
+
     with open(out_path, "wb") as f:
         f.write(image_data)
+
+
 def upload_image_to_zernio(image_path: Path, api_key: str) -> str:
     """Upload the image via Zernio's presigned upload flow and return its public URL."""
-    content_type = mimetypes.guess_type(image_path.name)[0] or "image/png"
+    content_type = "image/png"
 
     presign = requests.post(
         f"{ZERNIO_BASE_URL}/media/presign",
@@ -133,12 +133,12 @@ def post_to_instagram(image_url: str, caption: str, account_id: str, api_key: st
 
 
 def main() -> None:
-    gemini_key = env("GEMINI_API_KEY")
+    openai_key = env("OPENAI_API_KEY")
     zernio_key = env("ZERNIO_API_KEY")
     zernio_account_id = env("ZERNIO_ACCOUNT_ID")
 
     POSTS_DIR.mkdir(exist_ok=True)
-    client = genai.Client(api_key=gemini_key)
+    client = OpenAI(api_key=openai_key)
 
     theme = read_theme_prompt()
     print(f"Theme: {theme}")
@@ -155,7 +155,7 @@ def main() -> None:
     image_url = upload_image_to_zernio(image_path, zernio_key)
     print(f"Image uploaded to: {image_url}")
 
-    result = post_to_instagram(image_url, caption, zernio_account_id, zernio_key)
+    result = post_to_instagram(image_url, caption, zernio_account_id, zernio_account_id)
     print(f"Posted to Instagram: {result}")
 
 
