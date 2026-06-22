@@ -23,7 +23,7 @@ jobs:
 
       - name: Generate image, caption, and publish to Instagram
         env:
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           ZERNIO_API_KEY: ${{ secrets.ZERNIO_API_KEY }}
           ZERNIO_ACCOUNT_ID: ${{ secrets.ZERNIO_ACCOUNT_ID }}
         run: python scripts/generate_and_post.py
