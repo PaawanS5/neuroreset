@@ -161,7 +161,7 @@ def generate_image(image_prompt: str, out_path: Path, client: OpenAI) -> None:
     response = client.images.generate(
         model="gpt-image-1.5",
         prompt=image_prompt,
-        size="1024x1536",   # Portrait — ideal for Instagram
+        size="1024x1280",   # Portrait — ideal for Instagram
         quality="medium",
         n=1,
     )
