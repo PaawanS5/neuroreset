@@ -215,8 +215,8 @@ def post_to_instagram(
         },
         timeout=60,
     )
-  print(f"Zernio response status: {response.status_code}")
-  print(f"Zernio response body: {response.text}")
+    print(f"Zernio response status: {response.status_code}")
+    print(f"Zernio response body: {response.text}")
     response.raise_for_status()
     return response.json()
 
