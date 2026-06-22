@@ -160,7 +160,7 @@ def generate_image(image_prompt: str, out_path: Path, client: OpenAI) -> None:
         model="gpt-image-1.5",
         prompt=image_prompt,
         size="1024x1536",   # Portrait — ideal for Instagram
-        quality="standard",
+        quality="medium",
         n=1,
     )
     image_bytes = base64.b64decode(response.data[0].b64_json)
