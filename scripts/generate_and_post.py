@@ -76,7 +76,7 @@ def generate_image_prompts_and_caption(theme: str, client: OpenAI) -> tuple[list
     Ask GPT-4o (with logo + optional sample image as vision input) to produce:
       - 2 distinct image prompts and two beautiful quotes from the books in the prompt,
         each matching the brand style and explicitly instructing the model to include the logo
-      - 1 Instagram caption covering both images
+      - 1 Instagram caption having CTA ,"DM Reset ✨" covering both images
     """
     today = datetime.now(timezone.utc).strftime("%Y-%m-%d (%A)")
     content: list = []
