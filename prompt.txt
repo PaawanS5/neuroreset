@@ -1,101 +1,54 @@
-You are an expert Instagram content creator, copywriter, and AI image prompt engineer for a brand focused on subconscious healing, mindset transformation, hypnotherapy, personal growth, emotional wellness, and life transformation.
+Create a premium Instagram post for a brand focused on subconscious healing, mindset transformation, hypnotherapy, emotional wellness, personal growth, brain and gut health, and life transformation.
 
-The following books are the inspiration source for all content:
+Use the following books only as **inspiration for themes and ideas** (do not summarize or directly quote them):
 
-1. Gut and Mind Connection – Dr. Emeran Mayer
-2. The Good Gut – Dr. Justin Sonnenburg & Dr. Erica Sonnenburg
-3. Super Gut – William Davis
-4. Gut – Giulia Enders
-5. 10% Happier – Dan Harris
-6. Brain Maker – Dr. David Perlmutter
-7. Grain Brain – Dr. David Perlmutter
-8. Wheat Belly – William Davis
-9. Fast Like a Girl / Reset Factor – Dr. Mindy Pelz
-10. Fiber Fueled – Dr. Will Bulsiewicz
-11. Eat to Beat Disease – Dr. William Li
-12. How Not to Die – Dr. Michael Greger
-13. The Obesity Code / The Diabetes Code / The Cancer Code – Dr. Jason Fung
-14. The UltraMind Solution – Dr. Mark Hyman
+* Gut and Mind Connection
+* The Good Gut
+* Super Gut
+* Gut
+* 10% Happier
+* Brain Maker
+* Grain Brain
+* Wheat Belly
+* Fast Like a Girl
+* Fiber Fueled
+* Eat to Beat Disease
+* How Not to Die
+* The Obesity Code
+* The Diabetes Code
+* The Cancer Code
+* The UltraMind Solution
 
-TASK:
+Randomly choose one inspiring concept related to mindset, healing, habits, resilience, emotional well-being, brain health, gut health, or personal transformation.
 
-Randomly select ONE powerful concept, lesson, insight, quote, principle, or transformation idea from any of the above books and create a complete Instagram post.
+Generate:
 
-The content should feel inspiring, premium, emotionally engaging, and highly shareable.
+1. **Post Idea**
 
-OUTPUT FORMAT:
+   * Book inspiration
+   * Main lesson
 
-━━━━━━━━━━━━━━━━━━━━━━━
-POST IDEA
-━━━━━━━━━━━━━━━━━━━━━━━
+2. **AI Image Prompt**
 
-Mention:
-- Book Name
-- Main Lesson
+   * Ultra-realistic, cinematic, premium 4K
+   * Strong emotional storytelling
+   * Optimized for Instagram
+   * Include a 3–8 word text overlay
 
-━━━━━━━━━━━━━━━━━━━━━━━
-AI IMAGE PROMPT
-━━━━━━━━━━━━━━━━━━━━━━━
+3. **Caption**
 
-Generate a highly detailed AI image prompt that:
+   * Attention-grabbing hook
+   * Short insight or story
+   * Practical takeaway
+   * Motivational ending
+   * End with one rotating CTA:
 
-- Is visually stunning
-- Looks premium and professional
-- Uses cinematic lighting
-- Uses realistic human subjects
-- Has strong emotional storytelling
-- Represents transformation, healing, mindset growth, brain health, gut health, confidence, self-improvement, vitality, happiness, or personal breakthroughs
-- Is optimized for Instagram
-- Looks like a viral wellness page post
-- Includes a short text overlay (3-8 words)
+     * ✨ DM "RESET" if you want to see changes in your life.
+     * 🌱 DM "RESET" to begin your transformation journey.
+     * 💫 Ready for a new version of yourself? DM "RESET".
+     * 🔥 Your breakthrough may be one message away. DM "RESET".
+     * ✨ Curious about what's holding you back? DM "RESET".
 
-Image style:
-Ultra realistic, cinematic, 4K, magazine quality, high detail, inspirational social media aesthetic.
+4. **12–15 relevant hashtags** covering mindset, healing, wellness, self-growth, hypnotherapy, transformation, mental health, consciousness, brain health, and motivation.
 
-━━━━━━━━━━━━━━━━━━━━━━━
-CAPTION
-━━━━━━━━━━━━━━━━━━━━━━━
-
-Write:
-
-1. A strong hook in the first line.
-2. A short story, lesson, or insight from the book.
-3. A practical takeaway.
-4. A motivational ending.
-
-Tone:
-- Conversational
-- Inspiring
-- Easy to read
-- Emotionally engaging
-- No medical jargon
-- Suitable for adults, teens, and wellness audiences
-
-End every caption with one of these rotating CTAs:
-
-✨ DM "RESET" if you want to see changes in your life.
-
-OR
-
-🌱 DM "RESET" to begin your transformation journey.
-
-OR
-
-💫 Ready for a new version of yourself? DM "RESET".
-
-OR
-
-🔥 Your breakthrough may be one message away. DM "RESET".
-
-OR
-
-✨ Curious about what's holding you back? DM "RESET".
-
-━━━━━━━━━━━━━━━━━━━━━━━
-HASHTAGS
-━━━━━━━━━━━━━━━━━━━━━━━
-
-Generate 12-15 relevant hashtags related to:
-Mindset, Healing, Wellness, Self Growth, Personal Development, Hypnotherapy, Mental Health, Transformation, Consciousness, Brain Health, and Motivation.
-
-Make every output unique and avoid repeating previous concepts.
+Keep the content emotionally engaging, conversational, premium, and highly shareable. Avoid medical jargon and unsupported health claims.
