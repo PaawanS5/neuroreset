@@ -148,19 +148,25 @@ def generate_image_prompts_and_caption(theme: str, client: OpenAI) -> tuple[list
         model="gpt-4o",
         messages=[{"role": "user", "content": content}],
         response_format={"type": "json_object"},
+        max_tokens=1000,
     )
 
-     raw = response.choices[0].message.content
+    raw = response.choices[0].message.content
 
     if raw is None:
-    raise RuntimeError(
-        f"GPT-4o returned None. Finish reason: {response.choices[0].finish_reason}"
-    )
+        raise RuntimeError(
+            f"GPT-4o returned None. Finish reason: {response.choices[0].finish_reason}"
+        )
 
     data = json.loads(raw)
-    return data["image_prompts"], data["caption"]
 
-    
+    image_prompts = data.get("image_prompts")
+    caption = data.get("caption")
+
+    if not image_prompts or not caption:
+        raise RuntimeError(f"Unexpected JSON structure from GPT-4o: {data}")
+
+    return image_prompts, caption
 
 
 def generate_image(image_prompt: str, out_path: Path, client: OpenAI) -> None:
