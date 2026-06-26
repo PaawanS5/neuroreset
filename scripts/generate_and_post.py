@@ -150,7 +150,7 @@ def generate_image_prompts_and_caption(theme: str, client: OpenAI) -> tuple[list
         response_format={"type": "json_object"},
     )
 
-   raw = response.choices[0].message.content
+     raw = response.choices[0].message.content
 
     if raw is None:
     raise RuntimeError(
