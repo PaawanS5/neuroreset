@@ -47,6 +47,7 @@ BRAND_STYLE = (
     "photorealistic yet dreamlike rendering. "
     "This must feel like it belongs to the same brand world as the Neuro Reset Studio logo: "
     "a glowing purple brain-tree inside concentric gold rings on a dark cosmic background."
+    "This purple brain-tree should be positioned at top-centre or top-left"
 )
 
 
