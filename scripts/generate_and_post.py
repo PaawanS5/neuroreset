@@ -4,7 +4,7 @@ Daily Instagram poster - OpenAI (caption + 2 images) + Zernio (publishing).
 Pipeline:
   1. Read the theme prompt from prompt.txt
   2. Ask GPT-4o for today's image prompt + caption (brand-matched, logo-included)
-  3. Generate 2 images with gpt-image-1.5 (sequential calls, 1 image per call)
+  3. Generate 2 images with gpt-image-2 (sequential calls, 1 image per call)
   4. Crop each image to 1024x1280 (4:5) for Instagram compatibility
   5. Upload both images to Zernio's media storage (presigned URL flow)
   6. Publish as an Instagram carousel post via Zernio's posts API
@@ -18,6 +18,9 @@ Files expected in the repo root:
   prompt.txt          - Your theme / topic
   logo.png            - Your Neuro Reset Studio logo
   sample.png          - (Optional) A sample post for extra style reference
+
+Note: gpt-image-2 requires OpenAI API Organization Verification.
+      Complete it at: https://platform.openai.com/settings/organization/general
 """
 
 import base64
@@ -77,7 +80,7 @@ def generate_image_prompts_and_caption(theme: str, client: OpenAI) -> tuple[list
     Ask GPT-4o (with logo + optional sample image as vision input) to produce:
       - 2 distinct image prompts and two beautiful quotes from the books in the prompt,
         each matching the brand style and explicitly instructing the model to include the logo
-      - 1 Instagram caption having CTA ,"DM Reset ✨" covering both images
+      - 1 Instagram caption having CTA, "DM Reset ✨" covering both images
     """
     today = datetime.now(timezone.utc).strftime("%Y-%m-%d (%A)")
     content: list = []
@@ -129,7 +132,7 @@ def generate_image_prompts_and_caption(theme: str, client: OpenAI) -> tuple[list
             "in exactly this shape:\n"
             '{"image_prompts": ["...", "..."], "caption": "..."}\n\n'
             "image_prompts: a JSON array of exactly 2 strings. Each is a vivid, specific, "
-            "English-language text-to-image prompt (under 400 characters) for gpt-image-1.5. "
+            "English-language text-to-image prompt (under 400 characters) for gpt-image-2. "
             "Rules for each prompt:\n"
             "  • Must match the brand visual style (dark cosmic, gold accounts, purple glows).\n"
             "  • Must explicitly include the Neuro Reset Studio logo as described above — "
@@ -172,14 +175,22 @@ def generate_image_prompts_and_caption(theme: str, client: OpenAI) -> tuple[list
 
 def generate_image(image_prompt: str, out_path: Path, client: OpenAI) -> None:
     """
-    Generate a single image with gpt-image-1.5 at 1024x1536, then crop
+    Generate a single image with gpt-image-2 at 1024x1536, then crop
     to 1024x1280 (4:5 ratio) which is the max portrait Instagram accepts.
+
+    gpt-image-2 params used:
+      model          : "gpt-image-2"
+      size           : "1024x1536"  — portrait, cost-efficient, above Instagram minimum
+      quality        : "medium"     — good balance of quality and cost (~$0.04/image)
+      output_format  : "png"        — lossless, returned as base64
+      n              : 1            — one image per call (called sequentially)
     """
     response = client.images.generate(
-        model="gpt-image-1.5",
+        model="gpt-image-2",
         prompt=image_prompt,
-        size="1024x1536",  # Closest valid portrait size for gpt-image-1.5
+        size="1024x1536",
         quality="medium",
+        output_format="png",
         n=1,
     )
     image_bytes = base64.b64decode(response.data[0].b64_json)
