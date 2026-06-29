@@ -1,13 +1,14 @@
 """
-Daily Instagram poster - OpenAI (caption + 2 images) + Zernio (publishing).
+Daily Instagram poster - OpenAI (caption + 4 images) + Zernio (publishing).
 
 Pipeline:
   1. Read the theme prompt from prompt.txt
-  2. Ask GPT-4o for today's image prompt + caption (brand-matched, logo-included)
-  3. Generate 2 images with gpt-image-2 (sequential calls, 1 image per call)
+  2. Ask GPT-4o to pick ONE concept from the reference book list and produce
+     4 slide prompts + caption (brand-matched, logo watermark only)
+  3. Generate 4 images with gpt-image-2 (sequential calls, 1 image per call)
   4. Crop each image to 1024x1280 (4:5) for Instagram compatibility
-  5. Upload both images to Zernio's media storage (presigned URL flow)
-  6. Publish as an Instagram carousel post via Zernio's posts API
+  5. Upload all 4 images to Zernio's media storage (presigned URL flow)
+  6. Publish as a 4-slide Instagram carousel post via Zernio's posts API
 
 Required environment variables (set as GitHub repo secrets):
   OPENAI_API_KEY      - OpenAI API key
@@ -15,7 +16,7 @@ Required environment variables (set as GitHub repo secrets):
   ZERNIO_ACCOUNT_ID   - Zernio's account ID for your connected Instagram account
 
 Files expected in the repo root:
-  prompt.txt          - Your theme / topic
+  prompt.txt          - Optional extra context / focus area for today's post
   logo.png            - Your Neuro Reset Studio logo
   sample.png          - (Optional) A sample post for extra style reference
 
@@ -38,7 +39,25 @@ PROMPT_FILE     = Path("prompt.txt")
 SAMPLE_FILE     = Path("sample.png")
 LOGO_FILE       = Path("logo.png")
 POSTS_DIR       = Path("posts")
-IMAGES_PER_POST = 2
+IMAGES_PER_POST = 4
+
+# Reference books — GPT-4o picks ONE concept from these per daily carousel
+BOOK_LIST = """
+1.  Gut & Mind Connection — Dr. Imran Mayor
+2.  The Good Gut — Dr. Justin Sonnenburg & Dr. Erica Sonnenburg
+3.  Super Gut — William Davis
+4.  Gut — Giulia Enders
+5.  10% Human — Alanna Collen
+6.  Brain Maker — Dr. David Perlmutter
+7.  Grain Brain — Dr. David Perlmutter
+8.  Wheat Belly — William Davis
+9.  Reset Factor — Dr. Mindy Pelz
+10. Fiber Fueled — Dr. Will Bulsiewicz
+11. Eat to Beat Disease — Dr. William Li
+12. How Not to Die — Michael Greger
+13. Obesity Code / Diabetes Code / Cancer Code — Dr. Jason Fung
+14. Ultra Mind Solution — Mark Hyman
+"""
 
 # Core brand DNA injected into every image prompt
 BRAND_STYLE = (
@@ -50,7 +69,6 @@ BRAND_STYLE = (
     "photorealistic yet dreamlike rendering. "
     "This must feel like it belongs to the same brand world as the Neuro Reset Studio logo: "
     "a glowing purple brain-tree inside concentric gold rings on a dark cosmic background."
-    "This purple brain-tree should be positioned at top-centre or top-left"
 )
 
 
@@ -63,10 +81,8 @@ def env(name: str) -> str:
 
 def read_theme_prompt() -> str:
     if not PROMPT_FILE.exists():
-        raise RuntimeError("prompt.txt not found. Create it with your theme/topic.")
+        return ""  # prompt.txt is now optional — books drive the content
     theme = PROMPT_FILE.read_text().strip()
-    if not theme:
-        raise RuntimeError("prompt.txt is empty. Add a theme/topic to it.")
     return theme
 
 
@@ -77,10 +93,10 @@ def encode_image_b64(path: Path) -> str:
 
 def generate_image_prompts_and_caption(theme: str, client: OpenAI) -> tuple[list[str], str]:
     """
-    Ask GPT-4o (with logo + optional sample image as vision input) to produce:
-      - 2 distinct image prompts and two beautiful quotes from the books in the prompt,
-        each matching the brand style and explicitly instructing the model to include the logo
-      - 1 Instagram caption having CTA, "DM Reset ✨" covering both images
+    Ask GPT-4o to:
+      1. Pick ONE compelling concept from the reference book list
+      2. Build a 4-slide carousel teaching that concept in depth
+      3. Return 4 image prompts + 1 Instagram caption as JSON
     """
     today = datetime.now(timezone.utc).strftime("%Y-%m-%d (%A)")
     content: list = []
@@ -92,15 +108,13 @@ def generate_image_prompts_and_caption(theme: str, client: OpenAI) -> tuple[list
             "text": (
                 "This is the Neuro Reset Studio logo: "
                 "a purple glowing brain shaped like a tree with a golden root trunk, "
-                "enclosed in concentric gold rings, on a dark cosmic purple background. "
-                "\n\n"
-                "LOGO PLACEMENT RULE — this is critical: "
+                "enclosed in concentric gold rings, on a dark cosmic purple background.\n\n"
+                "LOGO PLACEMENT RULE — critical: "
                 "The logo must NEVER dominate or compete with the main content. "
-                "The content must sell itself. Place the logo as a small, subtle watermark "
-                "in one of these positions only: bottom-centre, bottom-left, bottom-right, "
-                "or top-left corner. It should be tasteful and unobtrusive — the way a "
-                "professional brand watermark appears on editorial photography. "
-                "The viewer's eye should land on the concept/message first, logo second."
+                "The content must sell itself. Place the logo ONLY as a small, subtle watermark "
+                "in one of these positions: bottom-centre, bottom-left, bottom-right, or top-left. "
+                "It should look like a professional editorial watermark — tasteful, unobtrusive. "
+                "The viewer's eye must land on the concept and message FIRST, logo second."
             ),
         })
         content.append({
@@ -116,7 +130,7 @@ def generate_image_prompts_and_caption(theme: str, client: OpenAI) -> tuple[list
             "type": "text",
             "text": (
                 "Here is a sample post from my Instagram feed. "
-                "Match its visual style, colour palette, mood, and composition."
+                "Match its visual style, colour palette, mood, and composition exactly."
             ),
         })
         content.append({
@@ -124,58 +138,83 @@ def generate_image_prompts_and_caption(theme: str, client: OpenAI) -> tuple[list
             "image_url": {"url": f"data:image/png;base64,{encode_image_b64(SAMPLE_FILE)}"},
         })
 
+    optional_focus = f"\nExtra focus from prompt.txt: {theme}\n" if theme else ""
+
     content.append({
         "type": "text",
         "text": (
-            f"Theme for my Instagram account: {theme}\n"
-            f"Today's date: {today}\n\n"
+            f"Today's date: {today}\n"
+            f"{optional_focus}\n"
             f"Brand visual style to strictly follow:\n{BRAND_STYLE}\n\n"
-            f"Create ONE Instagram carousel post with {IMAGES_PER_POST} slides for today.\n"
+
+            "=== YOUR REFERENCE BOOK LIST ===\n"
+            f"{BOOK_LIST}\n"
+
+            "=== YOUR TASK ===\n"
+            "Pick ONE specific, fascinating concept from any of these books — "
+            "something rooted in gut health, brain-gut connection, microbiome science, "
+            "metabolic health, or nutrition neuroscience. "
+            "Choose a concept that is genuinely surprising, educational, and actionable. "
+            "Then build a 4-slide Instagram carousel that teaches this concept in depth.\n\n"
+
             "Respond with ONLY raw JSON (no markdown fences, no commentary) "
             "in exactly this shape:\n"
-            '{"image_prompts": ["...", "..."], "caption": "..."}\n\n'
+            '{"book": "Book Title — Author", "concept": "One-line concept summary", '
+            '"image_prompts": ["...", "...", "...", "..."], "caption": "..."}\n\n'
 
-            "=== SLIDE CONCEPT STRATEGY ===\n"
-            "Each carousel must teach a specific, beautiful concept about meditation or "
-            "spirituality — something that genuinely helps people and feels educational, "
-            "not just decorative. Think: How does breathwork rewire the nervous system? "
-            "What happens in the brain during deep meditation? How does gratitude shift "
-            "your subconscious programming? Each slide should feel like a revelation.\n\n"
+            "=== 4-SLIDE NARRATIVE ARC ===\n\n"
 
-            "=== SLIDE 1 — Cinematic Concept Reveal ===\n"
-            "A breathtaking, photorealistic cosmic scene that VISUALISES the meditation or "
-            "spiritual concept (e.g. if the concept is 'breathwork calming the nervous system', "
-            "show golden breath waves moving through a glowing human silhouette in a cosmic void). "
-            "The scene itself must communicate the idea visually — not just be pretty. "
-            "Overlay a short, powerful headline (6-10 words) in bold glowing golden typography "
-            "at the top or centre — this is the hook. "
-            "Below it, add 1-2 lines of small explanatory text in soft white/silver type "
-            "that briefly tells the viewer WHAT this concept means for them. "
-            "Small Neuro Reset Studio logo watermark at bottom-centre.\n\n"
+            "SLIDE 1 — THE HOOK (Cinematic concept reveal)\n"
+            "A breathtaking photorealistic cosmic scene that visually REPRESENTS the concept "
+            "(e.g. for 'gut bacteria controlling mood': glowing neural connections flowing from "
+            "an illuminated gut upward into a radiant brain, cosmic purple-gold palette). "
+            "The scene itself communicates the idea — not just pretty, but meaningful. "
+            "Overlay: bold glowing golden headline (7-10 words) at top — this is the scroll-stopper. "
+            "Below it: 1 line of soft white text teasing WHY this matters. "
+            "Neuro Reset Studio logo as tiny watermark at bottom-centre.\n\n"
 
-            "=== SLIDE 2 — Educational Infographic / Technique Breakdown ===\n"
-            "An infographic-style image in the same dark cosmic brand palette "
-            "(deep navy/purple background, gold and white text, purple accent icons). "
-            "This slide must clearly teach a PRACTICAL meditation or spiritual technique "
-            "related to the theme — e.g. a 4-7-8 breathing method, a body scan sequence, "
-            "a visualisation practice, a mantra technique, a gratitude ritual. "
-            "Layout: bold title at top, then 3-5 short bullet steps or labelled sections "
-            "with small glowing icons, a science-backed 'Why it works' note at the bottom "
-            "in italic gold text. Clean, readable, educational — like the subconscious mind "
-            "infographic reference. Small Neuro Reset Studio logo watermark at top-left.\n\n"
+            "SLIDE 2 — THE SCIENCE (What's actually happening inside your body)\n"
+            "Infographic-style image, same dark cosmic brand palette "
+            "(deep navy/purple bg, gold headlines, white body text, purple accent icons). "
+            "Explain the SCIENCE behind the concept clearly: what organ/system is involved, "
+            "what the research says, a key statistic or finding from the book. "
+            "Layout: bold title at top, then 3-4 short fact-based sections with glowing icons, "
+            "a source attribution at bottom in small italic gold text (e.g. 'Source: Brain Maker — Dr. Perlmutter'). "
+            "Neuro Reset Studio logo watermark at top-left.\n\n"
 
-            "=== RULES FOR BOTH PROMPTS ===\n"
-            "  • Each prompt must be a vivid, specific English-language text-to-image prompt "
-            "    (under 450 characters) written for gpt-image-2.\n"
-            "  • The 2 slides must be visually distinct — different compositions, "
-            "    different information, different energy — so the carousel educates AND inspires.\n"
-            "  • Logo is always small and in a corner or bottom-centre — NEVER the focal point.\n"
-            "  • Text overlaid on images must be legible — high contrast, bold for headlines, "
-            "    never placed on a busy part of the background.\n\n"
+            "SLIDE 3 — THE PROBLEM (Why most people are unknowingly harming themselves)\n"
+            "Split between a moody cinematic visual (left or top half) showing the "
+            "negative state (e.g. inflamed gut, foggy brain, disrupted microbiome visualised cosmically) "
+            "and an infographic panel (right or bottom half) listing 4-5 common everyday habits "
+            "or foods that damage this system — written as short, punchy lines in white/gold text. "
+            "Headline: 'Are You Doing This? ❌' or equivalent hook. "
+            "Neuro Reset Studio logo watermark at bottom-right.\n\n"
 
-            "caption: one engaging Instagram caption (2-4 sentences) that teases the concept "
-            "and invites people to save/share. End with CTA 'DM Reset ✨' and 5-8 hashtags. "
-            "Tone: warm, educational, inspiring — like a trusted guide, not a salesperson."
+            "SLIDE 4 — THE SOLUTION (Practical steps to reset and heal)\n"
+            "Bright, hopeful energy — slightly warmer golden glow compared to previous slides. "
+            "Clean infographic layout: bold headline 'How to Reset ✨' at top, "
+            "then 4-5 specific, actionable steps drawn from the book's recommendations "
+            "(e.g. specific foods, habits, timings, techniques). "
+            "Each step has a small glowing icon. "
+            "At the bottom: one motivational closing line in italic gold. "
+            "Neuro Reset Studio logo watermark at bottom-centre, slightly larger than other slides "
+            "(this is the final brand impression slide).\n\n"
+
+            "=== UNIVERSAL RULES FOR ALL 4 PROMPTS ===\n"
+            "  • Each prompt: vivid, specific English-language text-to-image instruction "
+            "    under 450 characters, written for gpt-image-2.\n"
+            "  • All 4 slides must share the same brand palette but have DISTINCT compositions "
+            "    and energy — the carousel must feel like a journey, not repetition.\n"
+            "  • All text overlaid on images must be legible: high contrast, bold for headlines, "
+            "    placed on dark/clean areas of the background — never on busy regions.\n"
+            "  • Logo is always a small watermark in a corner — NEVER a focal point.\n"
+            "  • Content is king. Every slide must deliver real value the viewer wants to save.\n\n"
+
+            "caption: 3-4 sentence Instagram caption. "
+            "Open with a curiosity hook, briefly explain what they'll learn in this carousel, "
+            "invite them to save it and share with someone who needs this. "
+            "End with 'DM Reset ✨' CTA and 6-8 relevant hashtags. "
+            "Tone: warm, trustworthy, educational — like a brilliant friend who happens to be a doctor."
         ),
     })
 
@@ -183,7 +222,7 @@ def generate_image_prompts_and_caption(theme: str, client: OpenAI) -> tuple[list
         model="gpt-4o",
         messages=[{"role": "user", "content": content}],
         response_format={"type": "json_object"},
-        max_tokens=1000,
+        max_tokens=2000,  # increased for 4 detailed prompts
     )
 
     raw = response.choices[0].message.content
@@ -196,10 +235,19 @@ def generate_image_prompts_and_caption(theme: str, client: OpenAI) -> tuple[list
     data = json.loads(raw)
 
     image_prompts = data.get("image_prompts")
-    caption = data.get("caption")
+    caption       = data.get("caption")
+    book          = data.get("book", "unknown")
+    concept       = data.get("concept", "unknown")
 
-    if not image_prompts or not caption:
-        raise RuntimeError(f"Unexpected JSON structure from GPT-4o: {data}")
+    if not image_prompts or len(image_prompts) != IMAGES_PER_POST:
+        raise RuntimeError(
+            f"Expected {IMAGES_PER_POST} image prompts, got: {image_prompts}"
+        )
+    if not caption:
+        raise RuntimeError(f"Missing caption in GPT-4o response: {data}")
+
+    print(f"📖 Book: {book}")
+    print(f"💡 Concept: {concept}")
 
     return image_prompts, caption
 
@@ -209,12 +257,12 @@ def generate_image(image_prompt: str, out_path: Path, client: OpenAI) -> None:
     Generate a single image with gpt-image-2 at 1024x1536, then crop
     to 1024x1280 (4:5 ratio) which is the max portrait Instagram accepts.
 
-    gpt-image-2 params used:
-      model          : "gpt-image-2"
-      size           : "1024x1536"  — portrait, cost-efficient, above Instagram minimum
-      quality        : "medium"     — good balance of quality and cost (~$0.04/image)
-      output_format  : "png"        — lossless, returned as base64
-      n              : 1            — one image per call (called sequentially)
+    gpt-image-2 params:
+      model         : "gpt-image-2"
+      size          : "1024x1536"  — portrait, cost-efficient, above Instagram minimum
+      quality       : "medium"     — good balance of quality and cost (~$0.04/image)
+      output_format : "png"        — lossless, returned as base64
+      n             : 1            — one image per call (called sequentially)
     """
     response = client.images.generate(
         model="gpt-image-2",
@@ -232,7 +280,7 @@ def generate_image(image_prompt: str, out_path: Path, client: OpenAI) -> None:
     img = Image.open(out_path)
     cropped = img.crop((0, 0, 1024, 1280))
     cropped.save(out_path)
-    print(f"Cropped to 1024x1280 for Instagram: {out_path}")
+    print(f"  Cropped to 1024x1280 for Instagram: {out_path}")
 
 
 def upload_image_to_zernio(image_path: Path, api_key: str) -> str:
@@ -263,7 +311,7 @@ def upload_image_to_zernio(image_path: Path, api_key: str) -> str:
 def post_to_instagram(
     image_urls: list[str], caption: str, account_id: str, api_key: str
 ) -> dict:
-    """Publish a carousel post (multiple images) to Instagram via Zernio."""
+    """Publish a 4-slide carousel post to Instagram via Zernio."""
     media_items = [{"type": "image", "url": url} for url in image_urls]
 
     response = requests.post(
@@ -281,7 +329,7 @@ def post_to_instagram(
         timeout=60,
     )
     print(f"Zernio response status: {response.status_code}")
-    print(f"Zernio response body: {response.text}")
+    print(f"Zernio response body:   {response.text}")
     response.raise_for_status()
     return response.json()
 
@@ -295,27 +343,28 @@ def main() -> None:
     client = OpenAI(api_key=openai_key)
 
     theme = read_theme_prompt()
-    print(f"Theme: {theme}")
+    if theme:
+        print(f"Extra focus: {theme}")
 
     image_prompts, caption = generate_image_prompts_and_caption(theme, client)
-    print(f"Caption: {caption}")
+    print(f"\nCaption:\n{caption}\n")
 
     today_str  = datetime.now(timezone.utc).strftime("%Y-%m-%d")
     image_urls = []
 
     for i, prompt in enumerate(image_prompts, start=1):
-        print(f"\nGenerating image {i}/{IMAGES_PER_POST}...")
-        print(f"Prompt: {prompt}")
+        print(f"\nGenerating slide {i}/{IMAGES_PER_POST}...")
+        print(f"  Prompt: {prompt}")
         image_path = POSTS_DIR / f"{today_str}_{i}.png"
         generate_image(prompt, image_path, client)
-        print(f"Saved: {image_path}")
+        print(f"  Saved:  {image_path}")
 
         url = upload_image_to_zernio(image_path, zernio_key)
-        print(f"Uploaded: {url}")
+        print(f"  Uploaded: {url}")
         image_urls.append(url)
 
     result = post_to_instagram(image_urls, caption, zernio_account_id, zernio_key)
-    print(f"\nPosted carousel to Instagram: {result}")
+    print(f"\n✅ Posted 4-slide carousel to Instagram: {result}")
 
 
 if __name__ == "__main__":
