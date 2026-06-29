@@ -109,7 +109,7 @@ def generate_image_prompts_and_caption(theme: str, client: OpenAI) -> tuple[list
                 "a purple glowing brain shaped like a tree with a golden root trunk, "
                 "enclosed in concentric gold rings, on a dark cosmic purple background.\n\n"
                 "LOGO PLACEMENT RULE — critical: "
-                "The logo must NEVER dominate or compete with the main content. "
+                "The logo must NEVER dominate or compete with the main content and must be consistent. "
                 "The content must sell itself. Place the logo ONLY as a small, subtle watermark "
                 "in one of these positions: bottom-centre, bottom-left, bottom-right, or top-left. "
                 "It should look like a professional editorial watermark — tasteful, unobtrusive. "
