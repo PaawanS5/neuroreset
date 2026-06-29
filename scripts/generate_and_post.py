@@ -6,7 +6,7 @@ Pipeline:
   2. Ask GPT-4o to pick ONE concept from the reference book list and produce
      4 slide prompts + caption (brand-matched, logo watermark only)
   3. Generate 4 images with gpt-image-2 (sequential calls, 1 image per call)
-  4. Crop each image to 1024x1280 (4:5) for Instagram compatibility
+  4. Save images at 1080x1350 (4:5) — native Instagram portrait size, no cropping
   5. Upload all 4 images to Zernio's media storage (presigned URL flow)
   6. Publish as a 4-slide Instagram carousel post via Zernio's posts API
 
@@ -32,7 +32,6 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from openai import OpenAI
-from PIL import Image
 
 ZERNIO_BASE_URL = "https://zernio.com/api/v1"
 PROMPT_FILE     = Path("prompt.txt")
@@ -254,12 +253,14 @@ def generate_image_prompts_and_caption(theme: str, client: OpenAI) -> tuple[list
 
 def generate_image(image_prompt: str, out_path: Path, client: OpenAI) -> None:
     """
-    Generate a single image with gpt-image-2 at 1024x1536, then crop
-    to 1024x1280 (4:5 ratio) which is the max portrait Instagram accepts.
+    Generate a single image with gpt-image-2 at 1024x1280 (native 4:5 portrait).
+
+    1024x1280 is the exact Instagram portrait ratio (4:5) and sits well within
+    gpt-image-2's pixel budget — no cropping needed, zero detail lost.
 
     gpt-image-2 params:
       model         : "gpt-image-2"
-      size          : "1024x1536"  — portrait, cost-efficient, above Instagram minimum
+      size          : "1024x1280"  — native Instagram 4:5 portrait, no post-processing
       quality       : "medium"     — good balance of quality and cost (~$0.04/image)
       output_format : "png"        — lossless, returned as base64
       n             : 1            — one image per call (called sequentially)
@@ -267,7 +268,7 @@ def generate_image(image_prompt: str, out_path: Path, client: OpenAI) -> None:
     response = client.images.generate(
         model="gpt-image-2",
         prompt=image_prompt,
-        size="1024x1536",
+        size="1024x1280",
         quality="medium",
         output_format="png",
         n=1,
@@ -275,37 +276,59 @@ def generate_image(image_prompt: str, out_path: Path, client: OpenAI) -> None:
     image_bytes = base64.b64decode(response.data[0].b64_json)
     with open(out_path, "wb") as f:
         f.write(image_bytes)
-
-    # Crop to 1024x1280 (4:5) — Instagram's max portrait ratio
-    img = Image.open(out_path)
-    cropped = img.crop((0, 0, 1024, 1280))
-    cropped.save(out_path)
-    print(f"  Cropped to 1024x1280 for Instagram: {out_path}")
+    print(f"  Saved 1024x1280 (native Instagram 4:5): {out_path}")
 
 
-def upload_image_to_zernio(image_path: Path, api_key: str) -> str:
-    """Upload an image via Zernio's presigned upload flow and return its public URL."""
+def upload_image_to_zernio(image_path: Path, api_key: str, max_retries: int = 3) -> str:
+    """
+    Upload an image via Zernio's presigned upload flow and return its public URL.
+
+    Retries up to max_retries times on timeout or transient errors,
+    with exponential backoff. PNG files at 1024x1280 can be 3-6 MB,
+    so upload timeouts are set generously.
+    """
+    import time
+
     content_type = "image/png"
+    file_size_mb = image_path.stat().st_size / (1024 * 1024)
+    # Scale timeout: minimum 120s, +30s per MB above 2 MB
+    upload_timeout = max(120, int(120 + max(0, file_size_mb - 2) * 30))
+    print(f"  File size: {file_size_mb:.1f} MB — upload timeout: {upload_timeout}s")
 
-    presign = requests.post(
-        f"{ZERNIO_BASE_URL}/media/presign",
-        headers={"Authorization": f"Bearer {api_key}"},
-        json={"filename": image_path.name, "contentType": content_type},
-        timeout=30,
-    )
-    presign.raise_for_status()
-    presign_data = presign.json()
+    for attempt in range(1, max_retries + 1):
+        try:
+            # Step 1: get presigned URL
+            presign = requests.post(
+                f"{ZERNIO_BASE_URL}/media/presign",
+                headers={"Authorization": f"Bearer {api_key}"},
+                json={"filename": image_path.name, "contentType": content_type},
+                timeout=30,
+            )
+            presign.raise_for_status()
+            presign_data = presign.json()
 
-    with open(image_path, "rb") as f:
-        upload = requests.put(
-            presign_data["uploadUrl"],
-            data=f.read(),
-            headers={"Content-Type": content_type},
-            timeout=60,
-        )
-    upload.raise_for_status()
+            # Step 2: stream-upload the file to the presigned URL
+            with open(image_path, "rb") as f:
+                upload = requests.put(
+                    presign_data["uploadUrl"],
+                    data=f,                          # stream, not f.read() — avoids RAM spike
+                    headers={
+                        "Content-Type": content_type,
+                        "Content-Length": str(image_path.stat().st_size),
+                    },
+                    timeout=upload_timeout,
+                )
+            upload.raise_for_status()
+            return presign_data["publicUrl"]
 
-    return presign_data["publicUrl"]
+        except (requests.Timeout, requests.ConnectionError) as e:
+            if attempt == max_retries:
+                raise RuntimeError(
+                    f"Upload failed after {max_retries} attempts for {image_path.name}: {e}"
+                ) from e
+            wait = 2 ** attempt  # 2s, 4s, 8s …
+            print(f"  ⚠️  Upload attempt {attempt} timed out — retrying in {wait}s...")
+            time.sleep(wait)
 
 
 def post_to_instagram(
