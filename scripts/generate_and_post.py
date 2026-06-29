@@ -85,19 +85,22 @@ def generate_image_prompts_and_caption(theme: str, client: OpenAI) -> tuple[list
     today = datetime.now(timezone.utc).strftime("%Y-%m-%d (%A)")
     content: list = []
 
-    # Attach logo so GPT-4o can describe it precisely in the prompts
+    # Attach logo so GPT-4o understands its placement role
     if LOGO_FILE.exists():
         content.append({
             "type": "text",
             "text": (
-                "This is the Neuro Reset Studio logo. "
-                "Every image prompt you write MUST instruct the image model to include "
-                "this logo visibly and naturally within the scene — for example embedded "
-                "in a glowing cosmic background, floating as a holographic emblem, "
-                "or integrated as a mystical centrepiece. "
-                "Describe the logo accurately in the prompt so the model can render it: "
-                "a purple glowing brain shaped like a tree with golden root trunk, "
-                "enclosed in concentric gold rings, on a dark cosmic purple background."
+                "This is the Neuro Reset Studio logo: "
+                "a purple glowing brain shaped like a tree with a golden root trunk, "
+                "enclosed in concentric gold rings, on a dark cosmic purple background. "
+                "\n\n"
+                "LOGO PLACEMENT RULE — this is critical: "
+                "The logo must NEVER dominate or compete with the main content. "
+                "The content must sell itself. Place the logo as a small, subtle watermark "
+                "in one of these positions only: bottom-centre, bottom-left, bottom-right, "
+                "or top-left corner. It should be tasteful and unobtrusive — the way a "
+                "professional brand watermark appears on editorial photography. "
+                "The viewer's eye should land on the concept/message first, logo second."
             ),
         })
         content.append({
@@ -131,20 +134,48 @@ def generate_image_prompts_and_caption(theme: str, client: OpenAI) -> tuple[list
             "Respond with ONLY raw JSON (no markdown fences, no commentary) "
             "in exactly this shape:\n"
             '{"image_prompts": ["...", "..."], "caption": "..."}\n\n'
-            "image_prompts: a JSON array of exactly 2 strings. Each is a vivid, specific, "
-            "English-language text-to-image prompt (under 400 characters) for gpt-image-2. "
-            "Rules for each prompt:\n"
-            "  • Must match the brand visual style (dark cosmic, gold accounts, purple glows).\n"
-            "  • Must explicitly include the Neuro Reset Studio logo as described above — "
-            "    place it naturally in the scene (glowing emblem, holographic, centrepiece, etc).\n"
-            "  • The 2 prompts must be visually distinct — different scenes, compositions, "
-            "    or moments — so the carousel feels varied, not repetitive.\n"
-            "  • Each image must include a short powerful quote or thought (5-10 words) "
-            "    from the books mentioned in the theme, rendered as elegant glowing golden text "
-            "    overlaid naturally on the image — like a mystical inscription or illuminated scripture.\n\n"
-            "caption: one engaging Instagram caption (2-4 sentences) that works for both "
-            "slides, followed by a line of 5-8 relevant hashtags. "
-            "Tone: inspiring, thoughtful, aligned with neuroscience/mindset/personal growth."
+
+            "=== SLIDE CONCEPT STRATEGY ===\n"
+            "Each carousel must teach a specific, beautiful concept about meditation or "
+            "spirituality — something that genuinely helps people and feels educational, "
+            "not just decorative. Think: How does breathwork rewire the nervous system? "
+            "What happens in the brain during deep meditation? How does gratitude shift "
+            "your subconscious programming? Each slide should feel like a revelation.\n\n"
+
+            "=== SLIDE 1 — Cinematic Concept Reveal ===\n"
+            "A breathtaking, photorealistic cosmic scene that VISUALISES the meditation or "
+            "spiritual concept (e.g. if the concept is 'breathwork calming the nervous system', "
+            "show golden breath waves moving through a glowing human silhouette in a cosmic void). "
+            "The scene itself must communicate the idea visually — not just be pretty. "
+            "Overlay a short, powerful headline (6-10 words) in bold glowing golden typography "
+            "at the top or centre — this is the hook. "
+            "Below it, add 1-2 lines of small explanatory text in soft white/silver type "
+            "that briefly tells the viewer WHAT this concept means for them. "
+            "Small Neuro Reset Studio logo watermark at bottom-centre.\n\n"
+
+            "=== SLIDE 2 — Educational Infographic / Technique Breakdown ===\n"
+            "An infographic-style image in the same dark cosmic brand palette "
+            "(deep navy/purple background, gold and white text, purple accent icons). "
+            "This slide must clearly teach a PRACTICAL meditation or spiritual technique "
+            "related to the theme — e.g. a 4-7-8 breathing method, a body scan sequence, "
+            "a visualisation practice, a mantra technique, a gratitude ritual. "
+            "Layout: bold title at top, then 3-5 short bullet steps or labelled sections "
+            "with small glowing icons, a science-backed 'Why it works' note at the bottom "
+            "in italic gold text. Clean, readable, educational — like the subconscious mind "
+            "infographic reference. Small Neuro Reset Studio logo watermark at top-left.\n\n"
+
+            "=== RULES FOR BOTH PROMPTS ===\n"
+            "  • Each prompt must be a vivid, specific English-language text-to-image prompt "
+            "    (under 450 characters) written for gpt-image-2.\n"
+            "  • The 2 slides must be visually distinct — different compositions, "
+            "    different information, different energy — so the carousel educates AND inspires.\n"
+            "  • Logo is always small and in a corner or bottom-centre — NEVER the focal point.\n"
+            "  • Text overlaid on images must be legible — high contrast, bold for headlines, "
+            "    never placed on a busy part of the background.\n\n"
+
+            "caption: one engaging Instagram caption (2-4 sentences) that teases the concept "
+            "and invites people to save/share. End with CTA 'DM Reset ✨' and 5-8 hashtags. "
+            "Tone: warm, educational, inspiring — like a trusted guide, not a salesperson."
         ),
     })
 
