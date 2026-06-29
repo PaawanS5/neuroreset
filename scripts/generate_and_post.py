@@ -113,6 +113,7 @@ def generate_image_prompts_and_caption(theme: str, client: OpenAI) -> tuple[list
                 "The content must sell itself. Place the logo ONLY as a small, subtle watermark "
                 "in one of these positions: bottom-centre, bottom-left, bottom-right, or top-left. "
                 "It should look like a professional editorial watermark — tasteful, unobtrusive. "
+                "It should be named Neuro Reset Studio"
                 "The viewer's eye must land on the concept and message FIRST, logo second."
             ),
         })
